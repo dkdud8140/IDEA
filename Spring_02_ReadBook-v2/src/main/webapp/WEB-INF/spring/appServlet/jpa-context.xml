@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/data/jpa https://www.springframework.org/schema/data/jpa/spring-jpa.xsd">
+
+    <!--
+    jasypt 로 암호화된 username 과 password 를 db.properties 로 부터
+    가져와서 DataSource 의 username password 에 주입하기 우한 코드 구성
+
+    다음 3가지의 bean 이 서로 연동되어 암호화된 문자열을 복화하여 property 에 주입
+    PBEConfig bean 생성
+    PBEStringEncrypt bean 생성
+    PropertyPlaceHolderConfigure 생성
+    -->
+    <bean id="envConfig"
+          class="org.jasypt.encryption.pbe.config.EnvironmentStringPBEConfig">
+        <property name="algorithm" value="PBEWithMD5AndDES"/>
+        <property name="passwordEnvName" value="callor.com"/>
+    </bean>
+
+    <bean id="encryptor"
+          class="org.jasypt.encryption.pbe.StandardPBEStringEncryptor">
+        <property name="config" ref="envConfig"/>
+    </bean>
+    <bean
+            class="org.jasypt.spring31.properties.EncryptablePropertyPlaceholderConfigurer">
+        <constructor-arg ref="encryptor"/>
+        <property name="locations">
+            <list>
+                <value>/WEB-INF/spring/props/db.conn.properties</value>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="ds" class="org.apache.commons.dbcp2.BasicDataSource">
+        <property name="username" value="${db.username}"/>
+        <property name="password" value="${db.password}"/>
+        <property name="driverClassName" value="${db.driver}"/>
+        <property name="url" value="${db.url}" />
+    </bean>
+
+    <bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+        <property name="dataSource" ref="ds"/>
+        <property name="packagesToScan" value="com.callor.readbook.model"/>
+        <property name="jpaVendorAdapter">
+            <bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter" />
+        </property>
+        <property name="jpaProperties">
+            <props>
+                <prop key="hibernate.dialect">org.hibernate.dialect.MySQL8Dialect</prop>
+                <prop key="hibernate.hbm2ddl.auto">create</prop>
+            </props>
+        </property>
+    </bean>
+    <jpa:repositories base-package="com.callor.readbook.pesistence" />
+
+</beans>
